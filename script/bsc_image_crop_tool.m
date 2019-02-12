@@ -11,6 +11,9 @@ current_eye_index = [];
 eye_left_coords = [];
 eye_right_coords = [];
 cropping_rectangle_coordinates = [];
+cropping_rect = params.cropping_rect;
+eye_cropping_rect = [];
+face_cropping_rect = [];
 original_image = image;
 
 if ( nargin == 0 || isempty(image) )
@@ -18,6 +21,11 @@ if ( nargin == 0 || isempty(image) )
   load_image();
 else
   reset();
+end
+
+if ( ~isempty(cropping_rect) )
+  cropping_rectangle_coordinates = rect_to_rectangle( cropping_rect );
+  crop_image();
 end
 
 function mouse_down_cb(src, event)
@@ -96,7 +104,17 @@ function reset()
 
   load_sz = load_control.Position;
 
-  min_width = crop_sz(3) + rev_sz(3) + save_sz(3) + load_sz(3);
+  apply_control = uicontrol( ...
+      'parent', f ...
+    , 'style', 'pushbutton' ...
+    , 'string', 'Bounds ...' ...
+    , 'callback', @load_cropping_rect ...
+    , 'position', [load_sz(1) + load_sz(3), 0, load_sz(3), load_sz(4)] ...
+  );
+
+  apply_sz = apply_control.Position;
+
+  min_width = crop_sz(3) + rev_sz(3) + save_sz(3) + load_sz(3) + apply_sz(3);
   
   if ( f.Position(3) < min_width )
     f.Position(3) = min_width;
@@ -126,6 +144,8 @@ function crop_image(src, event)
   end
   
   image = image(min_y:max_y, min_x:max_x, :);
+  cropping_rect = [ min_x, min_y, max_x, max_y ];
+  
   reset();
 end
 
@@ -145,6 +165,8 @@ function save_image(src, event)
   
   try
     imwrite( saved_image, fullfile(path, filename), 'png' );
+    save( fullfile(path, strrep(filename, '.png', '.mat')) ...
+      , 'cropping_rect', 'eye_cropping_rect', 'face_cropping_rect' );
   catch err
     warning( 'Failed to write file: %s.', err.message );
   end
@@ -168,12 +190,34 @@ function load_image(src, event)
   reset();
 end
 
+function load_cropping_rect(src, event)
+  
+  [filename, path] = uigetfile( '*.mat', 'Open a cropping rect.' );
+  
+  if ( ~ischar(filename) )
+    return
+  end
+  
+  try
+    crop_rect_file = load( fullfile(path, filename) );
+    cropping_rectangle_coordinates = rect_to_rectangle( crop_rect_file.cropping_rect );
+    
+  catch err
+    warning( 'Failed to read cropping file "%s":\n "%s".', filename, err.message );
+  end
+  
+  crop_image();
+end
+
 function revert_image(src, event)
   image = original_image;
   reset();
 end
 
 function create_rectangle()
+  if ( isempty(eye_right_coords) || isempty(eye_left_coords) )
+    return;
+  end
 
   meas = params.far_plane_measurements;
 
@@ -223,6 +267,11 @@ function create_rectangle()
   eye_rect = [ eye_min_x, eye_min_y, eye_w_px, eye_h_px ];
   
   rectangle( 'Position', eye_rect );
+  
+  eye_cropping_rect = ...
+    [ eye_min_x, eye_min_y, eye_min_x+eye_w_px, eye_min_y+eye_h_px ];
+  face_cropping_rect = ...
+    [ face_left, face_top, face_left+face_width_px, face_top+face_height_px ];
 end
 
 end
@@ -252,11 +301,21 @@ dflts.image = [];
 dflts.resize_to = [];
 dflts.far_plane_measurements = get_far_plane_measurements();
 dflts.padding = [0, 0];
+dflts.cropping_rect = [];
 
 end
 
 function str = get_image_extension_str()
 
 str = '*.png;*.jpg;*.JPG';
+
+end
+
+function r = rect_to_rectangle(rect)
+
+r(1) = rect(1);
+r(2) = rect(2);
+r(3) = rect(3) - r(1);
+r(4) = rect(4) - r(2);
 
 end
