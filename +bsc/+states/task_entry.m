@@ -21,7 +21,7 @@ serial =    data.Value.SERIAL;
 use_arduino = interface.use_arduino;
 sync_pulse_map = serial.sync_pulse_map;
 
-send_message( tracker, 'SYNCH' );
+send( tracker, 'SYNCH' );
 sync_pulse( comm, sync_pulse_map.start );
 
 if ( use_arduino )

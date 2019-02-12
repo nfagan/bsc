@@ -31,7 +31,7 @@ next_sync_time = sync.next_sync_time;
 if ( isnan(next_sync_time) || current_time > next_sync_time )
   sync_pulse_map = data.Value.SERIAL.sync_pulse_map;
   
-  send_message( tracker, 'RESYNCH' );
+  send( tracker, 'RESYNCH' );
   sync_pulse( comm, sync_pulse_map.periodic_sync );
   
   sync_stp = data.Value.SYNC.plex_sync_stp;
