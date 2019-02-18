@@ -11,8 +11,9 @@ h = image_rect(4) - image_rect(2);
 
 area_ratio = area_from_rect(eye_rect) / area_from_rect(image_rect);
 
-im = imread( '/Users/Nick/Documents/MATLAB/repositories/bsc/stimuli/__images/Non-social/non_social_control_02.jpg' );
+% im = imread( '/Users/Nick/Documents/MATLAB/repositories/bsc/stimuli/__images/Non-social/non_social_control_02.jpg' );
 % im = imread( '/Users/Nick/Documents/MATLAB/repositories/bsc/stimuli/__images/Non-social/non_social_control_14.jpg' );
+im = imread( '/Users/Nick/Documents/MATLAB/repositories/bsc/stimuli/__images/Non-social/non_social_control_17.jpg' );
 
 bsc_social_image_crop_tool( [w, h], area_ratio ...
   , 'image_matrix', im );
@@ -20,7 +21,7 @@ bsc_social_image_crop_tool( [w, h], area_ratio ...
 %%
 
 test_p = '/Users/Nick/Desktop';
-test_file = 'test';
+test_file = 'test3';
 
 test_img = imread( fullfile(test_p, sprintf('%s.png', test_file)) );
 test_coord_file = load( fullfile(test_p, sprintf('%s.mat', test_file)) );

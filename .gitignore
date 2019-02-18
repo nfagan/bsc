@@ -1,3 +1,4 @@
 stimuli/
 +bsc/+config/config.mat
 .DS_Store
+*.m~
