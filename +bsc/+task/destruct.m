@@ -17,7 +17,7 @@ end
 function warn_on_error(func)
 
 try
-  func()
+  func();
 catch err
   warning( err.message );
 end

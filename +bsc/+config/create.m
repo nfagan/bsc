@@ -64,6 +64,9 @@ STIM_PARAMS.port = 'COM6';
 
 % STIMULI
 STIMULI = struct();
+% Value such that, on a 1024x768 display, and using an image originally of
+% size 479x639, the eye roi of social images will align with the average
+% eye roi in the free viewing task.
 STIMULI.image_rect = [326, 77, 804, 715];
 STIMULI.image_set = '';
 
