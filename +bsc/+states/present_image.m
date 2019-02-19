@@ -15,7 +15,7 @@ end
 
 function entry(state, data)
 
-handle_stim_comm( data, state );
+stim_rect = handle_stim_comm( data, state );
 
 window = data.Value.WINDOW;
 task = data.Value.TASK;
@@ -29,6 +29,8 @@ draw( image, window );
 if ( is_debug )
   debug_image = data.Value.CURRENT_TRIAL_DATA.debug_image;
   draw( debug_image, window );
+  
+  conditional_draw_eyelink_stim_rect( data, stim_rect );
 end
 
 flip( window );
@@ -68,7 +70,20 @@ next( state, states('inter_image_interval') );
 
 end
 
-function handle_stim_comm(data, state)
+function conditional_draw_eyelink_stim_rect(data, stim_rect)
+
+interface = data.Value.INTERFACE;
+
+if ( ~interface.use_eyelink )
+  return;
+end
+
+Eyelink( 'Command', 'clear_screen 0' );
+brains.util.el_draw_rect( stim_rect, 1 );
+
+end
+
+function stim_rect = handle_stim_comm(data, state)
 
 current_trial_data = data.Value.CURRENT_TRIAL_DATA;
 stim_comm = data.Value.STIM_COMM;

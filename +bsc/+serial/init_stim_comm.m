@@ -13,16 +13,24 @@ end
 baud = 9600;
 stim_comm = brains.arduino.calino.init_serial( port, baud );
 
-active_roi = char( stim_params.active_rois );
-target_roi_rect = stim_params.stim_rect;
+try
+  active_roi = char( stim_params.active_rois );
+  target_roi_rect = stim_params.stim_rect;
 
-send_bounds( stim_comm, 'm1', 'screen', round(screen_rect) );
-send_bounds( stim_comm, 'm1', active_roi, round(target_roi_rect) );
+  send_bounds( stim_comm, 'm1', 'screen', round(screen_rect) );
+  
+  % Make the active roi for m2 out of bounds.
+  send_bounds( stim_comm, 'm2', active_roi, repmat(-1, 1, 4) );
 
-send_stim_param( stim_comm, 'all', 'probability', stim_params.probability );
-send_stim_param( stim_comm, 'all', 'frequency', stim_params.frequency );
-send_stim_param( stim_comm, 'all', 'stim_stop_start', 0 );
-send_stim_param( stim_comm, 'all', 'max_n', stim_params.max_n );
-send_stim_param( stim_comm, 'all', 'protocol', stim_params.protocol );
+  send_stim_param( stim_comm, 'all', 'probability', stim_params.probability );
+  send_stim_param( stim_comm, 'all', 'frequency', stim_params.frequency );
+  send_stim_param( stim_comm, 'all', 'stim_stop_start', 0 );
+  send_stim_param( stim_comm, 'all', 'max_n', stim_params.max_n );
+  send_stim_param( stim_comm, 'all', 'protocol', stim_params.protocol );
+catch err
+  fclose( stim_comm );
+  
+  rethrow( err );
+end
 
 end

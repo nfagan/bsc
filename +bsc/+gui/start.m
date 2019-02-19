@@ -74,7 +74,7 @@ interface_popup.set_data( conf.INTERFACE );
 % Run
 panels.run = uipanel( F, 'Title', 'Run', 'Position', [X, Y+L*3, W, L] );
 
-funcs = { 'load', 'save', 'start' };
+funcs = { 'load', 'save', 'calibrate', 'start' };
 
 w = .5;
 l = 1 / numel(funcs);
@@ -215,6 +215,9 @@ function handle_button(source, event)
     case 'start'
       bsc.config.save( conf );
       bsc.task.start( conf );
+    case 'calibrate'
+      bsc.config.save( conf );
+      brains.calibrate.EyeCal();
     case 'load'
       load_new_config_file();
     case 'save'
