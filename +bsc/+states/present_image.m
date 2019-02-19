@@ -15,9 +15,7 @@ end
 
 function entry(state, data)
 
-activate_deactivate_stim_comm( data, 1 ); % activate
-
-state.UserData.is_stim_comm_active = true;
+handle_stim_comm( data, state );
 
 window = data.Value.WINDOW;
 task = data.Value.TASK;
@@ -67,6 +65,38 @@ activate_deactivate_stim_comm( data, 0 ); % deactivate
 
 states = data.Value.STATES;
 next( state, states('inter_image_interval') );
+
+end
+
+function handle_stim_comm(data, state)
+
+current_trial_data = data.Value.CURRENT_TRIAL_DATA;
+stim_comm = data.Value.STIM_COMM;
+stim_params = data.Value.STIM_PARAMS;
+
+image_id =    current_trial_data.image_identifier;
+stim_rect =   stim_params.stim_rects(image_id);
+active_roi =  stim_params.active_rois;
+
+% set current stimulated roi depending on image
+update_stimulated_roi( stim_comm, active_roi, stim_rect );
+
+% enable stimulation
+activate_deactivate_stim_comm( data, 1 ); 
+
+state.UserData.is_stim_comm_active = true;
+
+end
+
+function update_stimulated_roi(stim_comm, active_roi, stim_rect)
+
+import brains.arduino.calino.send_bounds;
+
+if ( isempty(stim_comm) || ~isvalid(stim_comm) )
+  return
+end
+
+send_bounds( stim_comm, 'm1', active_roi, round(stim_rect) );
 
 end
 

@@ -42,7 +42,6 @@ INTERFACE.sync_reward_serial_port = 'COM4';
 
 % STRUCTURE
 STRUCTURE = struct();
-STRUCTURE.image_set = '';
 STRUCTURE.inter_image_interval_reward_size = 100;
 STRUCTURE.inter_image_interval_n_reward_pulses = 1;
 STRUCTURE.key_press_reward_size = 50;
@@ -63,6 +62,11 @@ STIM_PARAMS.deactivate_stim_after_image_onset_seconds = 0;
 STIM_PARAMS.stim_rect = [];
 STIM_PARAMS.port = 'COM6';
 
+% STIMULI
+STIMULI = struct();
+STIMULI.image_rect = [326, 77, 804, 715];
+STIMULI.image_set = '';
+
 % EXPORT
 conf.PATHS = PATHS;
 conf.SCREEN = SCREEN;
@@ -70,6 +74,7 @@ conf.STIM_PARAMS = STIM_PARAMS;
 conf.TIME_IN = TIME_IN;
 conf.STRUCTURE = STRUCTURE;
 conf.INTERFACE = INTERFACE;
+conf.STIMULI = STIMULI;
 
 if ( do_save )
   bsc.config.save( conf );

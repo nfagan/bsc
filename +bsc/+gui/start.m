@@ -1,4 +1,4 @@
-function start()
+function start(conf)
 
 persistent F;
 
@@ -6,7 +6,11 @@ if ( isempty(F) || ~isvalid(F) )
   F = figure();
 end
 
-conf = bsc.config.reconcile( bsc.config.load() );
+if ( nargin < 1 )
+  conf = bsc.config.load();
+end
+
+conf = bsc.config.prune( bsc.config.reconcile(conf) );
 
 N = 4;    %   n panels
 W = 0.9;
@@ -67,17 +71,10 @@ interface_popup.on_change = @handle_interface_change;
 interface_popup.parent = panels.interface;
 interface_popup.set_data( conf.INTERFACE );
 
-
-% STRUCTURE
-panels.structure = uipanel( F ...
-  , 'Title', 'Structure' ...
-  , 'Position', [ X, Y+L*2, W, L ] ...
-);
-
 % Run
 panels.run = uipanel( F, 'Title', 'Run', 'Position', [X, Y+L*3, W, L] );
 
-funcs = { 'start' };
+funcs = { 'load', 'save', 'start' };
 
 w = .5;
 l = 1 / numel(funcs);
@@ -97,10 +94,29 @@ for i = 1:numel(funcs)
   y = y + l;
 end
 
-stim_params_popup = shared_utils.gui.TextFieldDropdown();
-stim_params_popup.on_change = @handle_structure_change;
-stim_params_popup.parent = panels.structure;
-stim_params_popup.set_data( conf.STRUCTURE );
+% STRUCTURE
+panels.structure = uipanel( F ...
+  , 'Title', 'Structure' ...
+  , 'Position', [ X, Y+L*2, W/2, L ] ...
+);
+
+structure_popup = shared_utils.gui.TextFieldDropdown();
+structure_popup.on_change = @handle_structure_change;
+structure_popup.orientation = 'vertical';
+structure_popup.parent = panels.structure;
+structure_popup.set_data( conf.STRUCTURE );
+
+% STIMULI
+panels.stimuli = uipanel( F ...
+  , 'Title', 'Stimuli' ...
+  , 'Position', [ X+W/2, Y+L*2, W/2, L ] ...
+);
+
+stimuli_popup = shared_utils.gui.TextFieldDropdown();
+stimuli_popup.on_change = @handle_stimuli_change;
+stimuli_popup.orientation = 'vertical';
+stimuli_popup.parent = panels.stimuli;
+stimuli_popup.set_data( conf.STIMULI );
 
 % stim param change
 function new = handle_stim_params_change(old, new, property)
@@ -136,6 +152,12 @@ function new = handle_structure_change(old, new, property)
   bsc.config.save( conf );
 end
 
+% stimuli change
+function new = handle_stimuli_change(old, new, property)
+  conf.STIMULI = new;
+  bsc.config.save( conf );
+end
+
 % screen change
 function new = handle_screen_change(old, new, property)
   conf.SCREEN = new;
@@ -148,6 +170,42 @@ function new = handle_interface_change(old, new, property)
   bsc.config.save( conf );
 end
 
+function load_new_config_file()
+  [filename, path] = uigetfile( '*.mat', 'Choose a config file.' );
+
+  if ( ~ischar(filename) )
+    return
+  end
+
+  try
+    loaded_conf = shared_utils.io.fload( fullfile(path, filename) );
+  catch err
+    warning( 'Failed to read file "%s": \n %s', filename, err.message );
+  end
+  
+  if ( ~bsc.config.is_config(loaded_conf) )
+    warning( 'The file "%s" is not a valid config file. Not loading ...' ...
+      , filename );
+    return
+  end
+  
+  bsc.gui.start( loaded_conf );
+end
+
+function save_current_config_file()  
+  [filename, path] = uiputfile( '*.mat', 'Save' );
+  
+  if ( ~ischar(filename) )
+    return
+  end
+  
+  try
+    save( fullfile(path, filename), 'conf' );
+  catch err
+    warning( 'Failed to save "%s":\n %s.', filename, err.message );
+  end
+end
+
 % button press
 function handle_button(source, event)
   
@@ -157,6 +215,10 @@ function handle_button(source, event)
     case 'start'
       bsc.config.save( conf );
       bsc.task.start( conf );
+    case 'load'
+      load_new_config_file();
+    case 'save'
+      save_current_config_file();
     otherwise
       error( 'Unhandled function name: "%s".', func );
   end      

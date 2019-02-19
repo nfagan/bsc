@@ -16,7 +16,7 @@ if ( nargin < 2 || isempty(brains_conf) )
   brains_conf = brains.config.load();
 end
 
-conf = bsc.config.reconcile( conf );
+conf = bsc.config.prune( bsc.config.reconcile(conf) );
 brains_conf = brains.config.reconcile( brains_conf );
 
 % Create task data.
@@ -50,6 +50,9 @@ make_images( data );
 make_sync_comm( data, conf );
 make_stim_comm( data );
 
+% We won't save data unless we make it here.
+data.Value.is_setup_complete = true;
+
 end
 
 function make_unified_opts(data, conf)
@@ -66,6 +69,7 @@ screen.background_color = conf.SCREEN.background_color;
 
 time_in = conf.TIME_IN;
 structure = conf.STRUCTURE;
+stimuli = conf.STIMULI;
 
 stim_params = bsc.serial.reconcile_stim_params( conf.STIM_PARAMS );
 
@@ -74,17 +78,16 @@ data.Value.SCREEN = screen;
 data.Value.TIME_IN = time_in;
 data.Value.STRUCTURE = structure;
 data.Value.STIM_PARAMS = stim_params;
+data.Value.STIMULI = stimuli;
 
 end
 
 function make_images(data)
 
 window = data.Value.WINDOW;
-image_set = data.Value.STRUCTURE.image_set;
+image_set = data.Value.STIMULI.image_set;
+image_rect = data.Value.STIMULI.image_rect;
 stim_params = data.Value.STIM_PARAMS;
-
-stim_rect = stim_params.stim_rect;
-active_roi = char( stim_params.active_rois );
 
 image_p = fullfile( bsc.util.get_project_folder(), 'stimuli', 'images' );
 image_sets = shared_utils.io.dirnames( image_p, 'folders' );
@@ -97,6 +100,7 @@ subdirs = { 'left', 'right', 'straight' };
 images = containers.Map();
 debug_images = containers.Map();
 image_rois = containers.Map(); % contains eye, face, etc.
+stim_rects = containers.Map();
 
 image_identifiers = {};
 
@@ -126,10 +130,12 @@ for i = 1:numel(subdirs)
     cropping_rect = image_roi.cropping_rect;
     eye_rect = image_roi.eye_cropping_rect;
     
-    [image_rect, eye_rect] = convert_stim_rect_to_image_rect( cropping_rect, eye_rect, stim_rect );
+%     [image_rect, eye_rect] = convert_stim_rect_to_image_rect( cropping_rect, eye_rect, stim_rect );
+    stim_rect = convert_image_rect_to_stim_rect( cropping_rect, eye_rect, image_rect );
+    stim_rect = round( stim_rect );
     
     configure_image_object_from_rect( stimulus_object, image_rect );
-    configure_image_object_from_rect( debug_stimulus_object, eye_rect );
+    configure_image_object_from_rect( debug_stimulus_object, stim_rect );
     
     image_identifier = sprintf( '%s/%s/%s', image_set, subdir, image_filenames{j} );
     image_identifiers{end+1} = image_identifier;  %#ok
@@ -137,6 +143,7 @@ for i = 1:numel(subdirs)
     images(image_identifier) = stimulus_object;
     debug_images(image_identifier) = debug_stimulus_object;
     image_rois(image_identifier) = image_roi;
+    stim_rects(image_identifier) = stim_rect;
   end
 end
 
@@ -147,7 +154,41 @@ IMAGES.image_identifiers = image_identifiers;
 IMAGES.image_set = image_set;
 IMAGES.image_rois = image_rois;
 
+stim_params.stim_rects = stim_rects;
+
 data.Value.IMAGES = IMAGES;
+data.Value.STIM_PARAMS = stim_params;
+
+end
+
+function stim_rect = convert_image_rect_to_stim_rect(crop_rect, roi_rect, image_rect)
+
+make_width = @(r) r(3) - r(1);
+make_height = @(r) r(4) - r(2);
+
+image_w = make_width( image_rect );
+image_h = make_height( image_rect );
+
+crop_w = make_width( crop_rect );
+crop_h = make_height( crop_rect );
+
+assert( all(crop_rect(1:2) == 0) || all(crop_rect(1:2) == 1) ...
+  , 'Expected crop rect to begin at 1 or 0.' );
+
+if ( all(crop_rect(1:2) == 1) )
+  roi_rect = roi_rect - 1;
+end
+
+frac_roi_x = roi_rect([1, 3]) / crop_w;
+frac_roi_y = roi_rect([2, 4]) / crop_h;
+
+offset_x = image_rect(1);
+offset_y = image_rect(2);
+
+new_roi_x = image_w * frac_roi_x + offset_x;
+new_roi_y = image_h * frac_roi_y + offset_y;
+
+stim_rect = [ new_roi_x(1), new_roi_y(1), new_roi_x(2), new_roi_y(2) ];
 
 end
 
@@ -344,6 +385,7 @@ data = ptb.Reference();
 referenced_data = struct();
 referenced_data.config = conf;
 referenced_data.brains_config = brains_conf;
+referenced_data.is_setup_complete = false;
 
 edf_filename = shared_utils.io.get_next_numbered_filename( data_folder, '.edf' );
 data.Destruct = @bsc.task.destruct;

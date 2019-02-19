@@ -57,6 +57,10 @@ end
 
 function handle_data_saving(data)
 
+if ( ~data.Value.is_setup_complete )
+  return
+end
+
 data_folder = data.Value.data_folder;
 edf_filename = data.Value.edf_filename;
 mat_filepath = get_mat_filepath( data_folder );
