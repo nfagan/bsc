@@ -69,6 +69,9 @@ STIMULI = struct();
 % eye roi in the free viewing task.
 STIMULI.image_rect = [326, 77, 804, 715];
 STIMULI.image_set = '';
+STIMULI.n_left = 1;
+STIMULI.n_right = 1;
+STIMULI.n_straight = 2;
 
 % EXPORT
 conf.PATHS = PATHS;

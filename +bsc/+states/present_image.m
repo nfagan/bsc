@@ -20,17 +20,20 @@ stim_rect = handle_stim_comm( data, state );
 window = data.Value.WINDOW;
 task = data.Value.TASK;
 structure = data.Value.STRUCTURE;
-image = data.Value.CURRENT_TRIAL_DATA.image;
+trial_data = data.Value.CURRENT_TRIAL_DATA;
+image = trial_data.image;
 
 is_debug = structure.is_debug; 
 
 draw( image, window );
 
 if ( is_debug )
-  debug_image = data.Value.CURRENT_TRIAL_DATA.debug_image;
+  debug_image = trial_data.debug_image;
   draw( debug_image, window );
   
   conditional_draw_eyelink_stim_rect( data, stim_rect );
+  
+  bsc.task.log( sprintf('Image: "%s"', trial_data.image_identifier), data, 'param' );
 end
 
 flip( window );
@@ -56,7 +59,7 @@ if ( is_stim_comm_active && current_time_in_state > deactivate_timeout )
   state.UserData.is_stim_comm_active = false;
   
   bsc.task.log( sprintf('Deactivating stim after %0.3f seconds ...' ...
-    , current_time_in_state), data, 'stime' );
+    , current_time_in_state), data, 'event' );
 end
 
 end

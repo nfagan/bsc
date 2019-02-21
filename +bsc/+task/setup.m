@@ -85,8 +85,9 @@ end
 function make_images(data)
 
 window = data.Value.WINDOW;
-image_set = data.Value.STIMULI.image_set;
-image_rect = data.Value.STIMULI.image_rect;
+stimuli = data.Value.STIMULI;
+image_set = stimuli.image_set;
+image_rect = stimuli.image_rect;
 stim_params = data.Value.STIM_PARAMS;
 
 image_p = fullfile( bsc.util.get_project_folder(), 'stimuli', 'images' );
@@ -101,6 +102,7 @@ images = containers.Map();
 debug_images = containers.Map();
 image_rois = containers.Map(); % contains eye, face, etc.
 stim_rects = containers.Map();
+image_set_containers = containers.Map();
 
 image_identifiers = {};
 
@@ -109,6 +111,8 @@ for i = 1:numel(subdirs)
   
   image_files = shared_utils.io.find( fullfile(image_p, subdir), '.png' );
   image_filenames = shared_utils.io.filenames( image_files );
+  
+  image_set_container = bsc.stimuli.FileSet();
   
   for j = 1:numel(image_files)
     image_file = image_files{j};
@@ -144,8 +148,15 @@ for i = 1:numel(subdirs)
     debug_images(image_identifier) = debug_stimulus_object;
     image_rois(image_identifier) = image_roi;
     stim_rects(image_identifier) = stim_rect;
+    
+    image_set_container.add_identifier( image_identifier );
   end
+  
+  finalize( image_set_container );
+  image_set_containers(subdir) = image_set_container;
 end
+
+[condition_ids, condition_labels] = get_condition_ids_and_labels( 1e4, stimuli );
 
 IMAGES = struct();
 IMAGES.images = images;
@@ -153,11 +164,56 @@ IMAGES.debug_images = debug_images;
 IMAGES.image_identifiers = image_identifiers;
 IMAGES.image_set = image_set;
 IMAGES.image_rois = image_rois;
+IMAGES.image_set_containers = image_set_containers;
+IMAGES.condition_ids = condition_ids;
+IMAGES.condition_labels = condition_labels;
+IMAGES.condition_index = 1;
 
 stim_params.stim_rects = stim_rects;
 
 data.Value.IMAGES = IMAGES;
 data.Value.STIM_PARAMS = stim_params;
+
+end
+
+function [ids, labels] = get_condition_ids_and_labels(n_blocks, stimuli)
+
+n_left = stimuli.n_left;
+n_right = stimuli.n_right;
+n_straight = stimuli.n_straight;
+
+n_conditions = n_left + n_right + n_straight;
+
+ids = shared_utils.general.get_blocked_condition_indices( n_blocks, n_conditions, n_conditions );
+
+left_inds = 1:n_left;
+right_inds = (1:n_right) + n_left;
+straight_inds = (1:n_straight) + (n_left + n_right);
+
+is_left = matches_condition_label( ids, left_inds );
+is_right = matches_condition_label( ids, right_inds );
+is_straight = matches_condition_label( ids, straight_inds );
+
+ids(is_left) = 1;
+ids(is_right) = 2;
+ids(is_straight) = 3;
+
+labels = containers.Map( 'keytype', 'double', 'valuetype', 'char' );
+labels(1) = 'left';
+labels(2) = 'right';
+labels(3) = 'straight';
+
+end
+
+function all_matches = matches_condition_label(all_indices, condition_labels)
+
+each_matches = arrayfun( @(x) all_indices == x, condition_labels, 'un', 0 );
+
+all_matches = false( numel(all_indices), 1 );
+
+for i = 1:numel(each_matches)
+  all_matches = all_matches | each_matches{i};
+end
 
 end
 
