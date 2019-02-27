@@ -17,7 +17,14 @@ else
   data.Value.TRIAL_DATA(end+1) = data.Value.CURRENT_TRIAL_DATA;
 end
 
-states = data.Value.STATES;
-next( state, states('new_trial') );
+current_n_trials = numel( data.Value.TRIAL_DATA );
+max_n_trials = data.Value.STRUCTURE.max_n_trials;
+
+if ( current_n_trials < max_n_trials )
+  % As long as we haven't exceeded the max trials, go to the new trial
+  % state. Otherwise, no state is marked as next, and the task stops.
+  states = data.Value.STATES;
+  next( state, states('new_trial') );
+end
 
 end
