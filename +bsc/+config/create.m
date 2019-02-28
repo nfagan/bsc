@@ -32,6 +32,7 @@ SCREEN.rect = [ 0, 0, 400, 400 ];
 TIME_IN = struct();
 TIME_IN.present_image = 10;
 TIME_IN.inter_image_interval = 3;
+TIME_IN.task = 5 * 60;
 
 % INTERFACE
 INTERFACE = struct();
