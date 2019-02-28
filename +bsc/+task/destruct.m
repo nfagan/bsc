@@ -26,7 +26,18 @@ end
 
 function handle_tracker_close(data)
 
+% Receiving file from eyelink generates stream of irrelevant warnings on 
+% r2015b; ignore them and then reenable them after file is received.
+warning( 'off', 'all' );
 shutdown( data.Value.TRACKER );
+warning( 'on', 'all' );
+
+end
+
+function print_n_stim(stim_comm)
+
+n_stim = brains.arduino.calino.check_n_stim( stim_comm );
+fprintf( '\n\n TOTAL N STIMULATIONS: %d\n\n', n_stim );
 
 end
 
@@ -35,22 +46,18 @@ function handle_serial_close(data)
 sync_comm = data.Value.SYNC_COMM;
 stim_comm = data.Value.STIM_COMM;
 
-if ( ~isempty(sync_comm) && isvalid(sync_comm) )
-  try
-    close( sync_comm )
-  catch err
-    warning( err.message );
-  end
+if ( ~isempty(sync_comm) && isvalid(sync_comm) )  
+  % Attempt to close serial communication for sync comm.
+  warn_on_error( @() close(sync_comm) );
 end
 
 if ( ~isempty(stim_comm) && isvalid(stim_comm) )
-  try
-    % Different close function -- stim_comm is a Matlab serial object,
-    % whereas sync_comm is a serial_comm.SerialManagerPaired object.
-    fclose( stim_comm );
-  catch err
-    warning( err.message );
-  end
+  % Attempt to print amount of stim + sham
+  warn_on_error( @() print_n_stim(stim_comm) );
+  
+  % Different close function -- stim_comm is a Matlab serial object,
+  % whereas sync_comm is a serial_comm.SerialManagerPaired object.
+  warn_on_error( @() fclose(stim_comm) );
 end
 
 end

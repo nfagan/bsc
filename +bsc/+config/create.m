@@ -76,6 +76,7 @@ STIMULI.n_left = 1;
 STIMULI.n_right = 1;
 STIMULI.n_straight = 2;
 STIMULI.max_n_repeats_for_image_set = 2;
+STIMULI.image_subdirectory_name = 'images';
 
 % EXPORT
 conf.PATHS = PATHS;
