@@ -86,17 +86,21 @@ function make_images(data)
 
 window = data.Value.WINDOW;
 stimuli = data.Value.STIMULI;
+structure = data.Value.STRUCTURE;
 image_set = stimuli.image_set;
 image_rect = stimuli.image_rect;
 stim_params = data.Value.STIM_PARAMS;
 
-image_p = fullfile( bsc.util.get_project_folder(), 'stimuli', 'images' );
+time_limit_per_permutation_iter = 1;
+
+n_blocks = structure.n_blocks;
+max_n_repeats = stimuli.max_n_repeats_for_image_set;
+image_subdir = stimuli.image_subdirectory_name;
+
+image_p = fullfile( bsc.util.get_project_folder(), 'stimuli', image_subdir );
 image_sets = shared_utils.io.dirnames( image_p, 'folders' );
 
-shared_utils.assertions.assert__is_parameter( image_set, image_sets, 'image set' );
-
-image_p = fullfile( image_p, image_set );
-subdirs = { 'left', 'right', 'straight' };
+directions = { 'left', 'right', 'straight' };
 
 images = containers.Map();
 debug_images = containers.Map();
@@ -105,14 +109,30 @@ stim_rects = containers.Map();
 image_set_containers = containers.Map();
 
 image_identifiers = {};
+all_image_sets = containers.Map();
 
-for i = 1:numel(subdirs)  
-  subdir = subdirs{i};
+C = combvec( 1:numel(directions), 1:numel(image_sets) );
+
+for i = 1:size(C, 2)
+  subdir = directions{C(1, i)};
+  image_set = image_sets{C(2, i)};
   
-  image_files = shared_utils.io.find( fullfile(image_p, subdir), '.png' );
+  if ( strncmp(image_set, '__', 2) )
+    % Ignore image sets that begin with __
+    continue;
+  end
+  
+  sub_image_p = fullfile( image_p, image_set, subdir );
+  
+  image_files = shared_utils.io.find( sub_image_p, '.png' );
   image_filenames = shared_utils.io.filenames( image_files );
+  image_set_id = sprintf( '%s/%s', image_set, subdir );
   
   image_set_container = bsc.stimuli.FileSet();
+  
+  if ( ~isKey(all_image_sets, image_set) )
+    all_image_sets(image_set) = true;
+  end
   
   for j = 1:numel(image_files)
     image_file = image_files{j};
@@ -134,14 +154,13 @@ for i = 1:numel(subdirs)
     cropping_rect = image_roi.cropping_rect;
     eye_rect = image_roi.eye_cropping_rect;
     
-%     [image_rect, eye_rect] = convert_stim_rect_to_image_rect( cropping_rect, eye_rect, stim_rect );
     stim_rect = convert_image_rect_to_stim_rect( cropping_rect, eye_rect, image_rect );
     stim_rect = round( stim_rect );
     
     configure_image_object_from_rect( stimulus_object, image_rect );
     configure_image_object_from_rect( debug_stimulus_object, stim_rect );
     
-    image_identifier = sprintf( '%s/%s/%s', image_set, subdir, image_filenames{j} );
+    image_identifier = sprintf( '%s/%s', image_set_id, image_filenames{j} );
     image_identifiers{end+1} = image_identifier;  %#ok
     
     images(image_identifier) = stimulus_object;
@@ -153,10 +172,14 @@ for i = 1:numel(subdirs)
   end
   
   finalize( image_set_container );
-  image_set_containers(subdir) = image_set_container;
+  image_set_containers(image_set_id) = image_set_container;
 end
 
-[condition_ids, condition_labels] = get_condition_ids_and_labels( 1e4, stimuli );
+all_image_sets = keys( all_image_sets );
+
+[condition_ids, condition_labels] = ...
+  get_condition_ids_and_labels_mult_image_sets( n_blocks, stimuli ...
+  , all_image_sets, directions, max_n_repeats, time_limit_per_permutation_iter );
 
 IMAGES = struct();
 IMAGES.images = images;
@@ -176,32 +199,139 @@ data.Value.STIM_PARAMS = stim_params;
 
 end
 
-function [ids, labels] = get_condition_ids_and_labels(n_blocks, stimuli)
+function [n_reps_per_direction, total_n_reps] = get_n_repetitions_per_direction(stimuli, directions)
 
-n_left = stimuli.n_left;
-n_right = stimuli.n_right;
-n_straight = stimuli.n_straight;
+n_reps_per_direction = struct();
+total_n_reps = 0;
 
-n_conditions = n_left + n_right + n_straight;
+for i = 1:numel(directions)
+  direction = directions{i};
+  
+  n_use_fieldname = sprintf( 'n_%s', direction );
+  
+  if ( ~isfield(stimuli, n_use_fieldname) )
+    error( 'Direction "%s" has no corresponding n_%s field in STRUCTURE.' ...
+      , direction, direction );
+  end
+  
+  n_use = stimuli.(n_use_fieldname);
+  
+  n_reps_per_direction.(direction) = n_use;
+  total_n_reps = total_n_reps + n_use;
+end
 
-ids = shared_utils.general.get_blocked_condition_indices( n_blocks, n_conditions, n_conditions );
+end
 
-left_inds = 1:n_left;
-right_inds = (1:n_right) + n_left;
-straight_inds = (1:n_straight) + (n_left + n_right);
+function [final_ids, labels] = ...
+  get_condition_ids_and_labels_mult_image_sets(n_blocks, stimuli, image_sets ...
+  , directions, max_repeating_sets, time_limit_per_iteration)
 
-is_left = matches_condition_label( ids, left_inds );
-is_right = matches_condition_label( ids, right_inds );
-is_straight = matches_condition_label( ids, straight_inds );
+[n_reps_per_direction, total_n_reps] = get_n_repetitions_per_direction( stimuli, directions );
 
-ids(is_left) = 1;
-ids(is_right) = 2;
-ids(is_straight) = 3;
+n_sets = numel( image_sets );
+n_conditions = total_n_reps * n_sets;
 
+tmp_ids = shared_utils.general.get_blocked_condition_indices( n_blocks, n_conditions, n_conditions );
+final_ids = nan( size(tmp_ids) );
+image_set_ids = nan( size(tmp_ids) );
+
+remaining_ids = randperm( n_conditions );
+condition_id = 1;
 labels = containers.Map( 'keytype', 'double', 'valuetype', 'char' );
-labels(1) = 'left';
-labels(2) = 'right';
-labels(3) = 'straight';
+
+make_image_set_label = @(image_set, direction) sprintf( '%s/%s', image_set, direction );
+
+for i = 1:n_sets  
+  image_set = image_sets{i};
+  
+  for j = 1:numel(directions)
+    direction = directions{j};
+    n_reps = n_reps_per_direction.(direction);
+    is_select_ind = 1:n_reps;
+    
+    direction_inds = remaining_ids(is_select_ind);
+    is_direction = matches_condition_label( tmp_ids, direction_inds );
+    
+    final_ids(is_direction) = condition_id;
+    image_set_ids(is_direction) = i;  % one image set.
+    
+    labels(condition_id) = make_image_set_label( image_set, direction );
+    
+    remaining_ids(is_select_ind) = [];
+    condition_id = condition_id + 1;
+  end
+end
+
+if ( max_repeating_sets > 0 )
+  permuted_ind = permute_ensuring_n_non_repeating( image_set_ids, n_conditions ...
+    , max_repeating_sets, time_limit_per_iteration );
+  final_ids = final_ids(permuted_ind);
+end
+
+assert( labels.Count == numel(unique(final_ids)) );
+
+end
+
+function permuted_ind = permute_ensuring_n_non_repeating(values, n_conditions, threshold, time_limit_per_iter)
+
+% For each unique value in `values`, ensure no more than `threshold` of
+% them appear in a row. The implementation is such that the number of
+% conditions within each block is preserved.
+
+n_values = numel( values );
+n_blocks = n_values / n_conditions;
+unique_values = unique( values );
+n_unique_values = numel( unique_values );
+
+assert( mod(n_blocks, 1) == 0 );  % ensure integer valued n_blocks
+
+permuted_ind = nan( n_values, 1 );
+
+stp = 1;
+is_ok = false( numel(unique_values), 1 );
+for i = 1:n_blocks
+  stop = stp + n_conditions - 1;
+  
+  subset = reshape( values(stp:stop), [], 1 );
+  perm_ind = 1:n_conditions;
+  has_valid_permutation = false;
+  iter_timer = tic();
+  
+  while ( toc(iter_timer) < time_limit_per_iter )
+    is_ok(:) = false;
+    
+    if ( i == 1 )
+      permuted_subset = subset(perm_ind);
+    else
+      % Ensure that `threshold` is respected across the boundary between
+      % the previous and current block.
+      permuted_subset = [ last_block; subset(perm_ind) ];
+    end
+  
+    for j = 1:n_unique_values
+      is_value = permuted_subset == unique_values(j);
+      
+      [~, durs] = shared_utils.logical.find_all_starts( is_value );
+      is_ok(j) = ~any( durs > threshold );
+    end
+    
+    if ( all(is_ok) )
+      has_valid_permutation = true;
+      break;
+    else
+      perm_ind = randperm( n_conditions );
+    end
+  end
+  
+  if ( ~has_valid_permutation )
+    error( 'Failed to obtain a valid permutation within %0.3f seconds.', time_limit_per_iter );
+  end
+  
+  permuted_ind(stp:stop) = perm_ind + stp - 1;
+  last_block = subset(perm_ind);
+  
+  stp = stp + n_conditions;
+end
 
 end
 
@@ -245,53 +375,6 @@ new_roi_x = image_w * frac_roi_x + offset_x;
 new_roi_y = image_h * frac_roi_y + offset_y;
 
 stim_rect = [ new_roi_x(1), new_roi_y(1), new_roi_x(2), new_roi_y(2) ];
-
-end
-
-function [new_image_rect, new_roi_rect] = convert_stim_rect_to_image_rect(crop_rect, roi_rect, stim_rect)
-
-target_width = stim_rect(3) - stim_rect(1);
-target_height = stim_rect(4) - stim_rect(2);
-target_x_offset = stim_rect(1);
-target_y_offset = stim_rect(2);
-
-cx = crop_rect(1);
-cy = crop_rect(2);
-
-make_origin_referenced = @(r, cx, cy) [r(1)-cx, r(2)-cy, r(3)-cx, r(4)-cy];
-make_width = @(r) r(3) - r(1);
-make_height = @(r) r(4) - r(2);
-
-origin_referenced_eye = make_origin_referenced( roi_rect, cx, cy );
-origin_referenced_crop = make_origin_referenced( crop_rect, cx, cy );
-
-roi_crop_width = make_width( origin_referenced_eye );
-roi_crop_height = make_height( origin_referenced_eye );
-
-crop_width = make_width( origin_referenced_crop );
-crop_height = make_height( origin_referenced_crop );
-
-x_offset_to_roi = crop_rect(1) - roi_rect(1);
-y_offset_to_roi = crop_rect(2) - roi_rect(2);
-
-% match to eyes
-frac_width = target_width / roi_crop_width;
-frac_height = target_height / roi_crop_height;
-
-x_frac_offset = x_offset_to_roi * frac_width;
-y_frac_offset = y_offset_to_roi * frac_height;
-
-new_width = crop_width * frac_width;
-new_height = crop_height * frac_height;
-
-new_image_rect = [ 0, 0, new_width, new_height ];
-
-new_image_rect([1, 3]) = new_image_rect([1, 3]) + target_x_offset + x_frac_offset;
-new_image_rect([2, 4]) = new_image_rect([2, 4]) + target_y_offset + y_frac_offset;
-
-new_roi_rect = [ 0, 0, roi_crop_width*frac_width, roi_crop_height*frac_height ];
-new_roi_rect([1, 3]) = new_roi_rect([1, 3]) + target_x_offset;
-new_roi_rect([2, 4]) = new_roi_rect([2, 4]) + target_y_offset;
 
 end
 

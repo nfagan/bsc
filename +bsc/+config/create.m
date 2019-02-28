@@ -33,6 +33,7 @@ TIME_IN = struct();
 TIME_IN.present_image = 10;
 TIME_IN.inter_image_interval = 3;
 TIME_IN.task = 5 * 60;
+TIME_IN.delay_to_reward = 0;
 
 % INTERFACE
 INTERFACE = struct();
@@ -48,6 +49,8 @@ STRUCTURE.inter_image_interval_n_reward_pulses = 1;
 STRUCTURE.key_press_reward_size = 50;
 STRUCTURE.is_debug = true;
 STRUCTURE.debug_tags = 'all';
+STRUCTURE.max_n_trials = Inf;
+STRUCTURE.n_blocks = 100;
 
 % STIM_PARAMS
 STIM_PARAMS = struct();
@@ -73,6 +76,8 @@ STIMULI.image_set = '';
 STIMULI.n_left = 1;
 STIMULI.n_right = 1;
 STIMULI.n_straight = 2;
+STIMULI.max_n_repeats_for_image_set = 2;
+STIMULI.image_subdirectory_name = 'images';
 
 % EXPORT
 conf.PATHS = PATHS;
