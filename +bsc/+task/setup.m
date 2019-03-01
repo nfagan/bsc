@@ -491,7 +491,7 @@ function make_task(data)
 
 task = ptb.Task();
 
-task.Duration = Inf;
+task.Duration = data.Value.TIME_IN.task;
 task.Loop = @(task) bsc.task.loop( task, data );
 
 data.Value.TASK = task;

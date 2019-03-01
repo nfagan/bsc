@@ -30,10 +30,10 @@ if ( is_debug )
   debug_image = trial_data.debug_image;
   draw( debug_image, window );
   
-  conditional_draw_eyelink_stim_rect( data, stim_rect );
-  
   bsc.task.log( sprintf('Image: "%s"', trial_data.image_identifier), data, 'param' );
 end
+
+conditional_draw_eyelink_stim_rect( data, stim_rect );
 
 flip( window );
 
