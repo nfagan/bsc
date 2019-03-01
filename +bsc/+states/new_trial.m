@@ -25,12 +25,17 @@ end
 
 function trial_data = create_trial_data(data)
 
+stim_params = data.Value.STIM_PARAMS;
+
 % Is this a left vs. right vs. straight trial?
 condition_label = get_current_condition_label( data );
 
 % Id of to-be-shown image
 image_identifier = get_current_image_identifier( data, condition_label );
 image = get_current_image( data, image_identifier );
+
+% Stim rect associated with the current image
+stim_rect = stim_params.stim_rects(image_identifier);
 
 % Representation of stimulated bounds for this image.
 debug_image = get_current_debug_image( data, image_identifier );
@@ -41,6 +46,7 @@ trial_data.image_condition = condition_label;
 trial_data.image_identifier = image_identifier;
 trial_data.image = image;
 trial_data.debug_image = debug_image;
+trial_data.stim_rect = stim_rect;
 
 end
 

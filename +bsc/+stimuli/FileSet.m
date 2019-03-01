@@ -131,11 +131,11 @@ classdef FileSet < handle
         return
       end
       
-      all_ids = obj.all_identifiers;
+      all_ids = obj.all_identifiers(:);
       
       if ( obj.IsUniqueIdentifiers )
         % Ensure column vector.
-        all_ids = reshape( unique(all_ids), [], 1 );
+        all_ids = unique( all_ids );
       end
       
       n_ids = numel( all_ids );

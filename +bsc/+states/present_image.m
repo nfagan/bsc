@@ -18,7 +18,6 @@ function entry(state, data)
 stim_rect = handle_stim_comm( data, state );
 
 window = data.Value.WINDOW;
-task = data.Value.TASK;
 structure = data.Value.STRUCTURE;
 trial_data = data.Value.CURRENT_TRIAL_DATA;
 image = trial_data.image;
@@ -38,7 +37,7 @@ end
 
 flip( window );
 
-data.Value.CURRENT_TRIAL_DATA.events.image_onset = elapsed( task ); % task time.
+bsc.task.mark_event( data, 'image_onset' );
 
 end
 
@@ -92,9 +91,8 @@ current_trial_data = data.Value.CURRENT_TRIAL_DATA;
 stim_comm = data.Value.STIM_COMM;
 stim_params = data.Value.STIM_PARAMS;
 
-image_id =    current_trial_data.image_identifier;
-stim_rect =   stim_params.stim_rects(image_id);
-active_roi =  stim_params.active_rois;
+stim_rect = current_trial_data.stim_rect;
+active_roi = stim_params.active_rois;
 
 % set current stimulated roi depending on image
 update_stimulated_roi( stim_comm, active_roi, stim_rect );

@@ -19,6 +19,8 @@ window = data.Value.WINDOW;
 
 flip( window );
 
+bsc.task.mark_event( data, 'image_offset' );
+
 state.UserData.current_reward_pulse_index = 1;
 state.UserData.reward_timer = nan;
 
@@ -28,7 +30,6 @@ function loop(state, data)
 
 structure = data.Value.STRUCTURE;
 sync_comm = data.Value.SYNC_COMM; % performs synch + reward
-task = data.Value.TASK;
 time_in = data.Value.TIME_IN;
 
 reward_timer = state.UserData.reward_timer;
@@ -56,9 +57,7 @@ if ( reward_condition_met )
   
   % If this is the first pulse, log the time of reward.
   if ( current_pulse_index == 1 )
-    current_time = elapsed( task );
-    
-    data.Value.CURRENT_TRIAL_DATA.events.inter_image_interval_reward_onset = current_time;
+    bsc.task.mark_event( data, 'inter_image_interval_reward_onset' );
   end
   
   bsc.task.log( 'Rewarding ...', data, 'reward' );
