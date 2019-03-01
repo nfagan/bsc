@@ -47,6 +47,7 @@ trial_data.image_identifier = image_identifier;
 trial_data.image = image;
 trial_data.debug_image = debug_image;
 trial_data.stim_rect = stim_rect;
+trial_data.image_rect = get_rect( image );  % bounds of the image on the screen.
 
 end
 

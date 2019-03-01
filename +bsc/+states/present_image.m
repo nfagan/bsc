@@ -57,6 +57,8 @@ if ( is_stim_comm_active && current_time_in_state > deactivate_timeout )
   
   state.UserData.is_stim_comm_active = false;
   
+  bsc.task.mark_event( data, 'stim_deactivated' );
+  
   bsc.task.log( sprintf('Deactivating stim after %0.3f seconds ...' ...
     , current_time_in_state), data, 'event' );
 end
