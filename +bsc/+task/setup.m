@@ -53,6 +53,8 @@ make_stim_comm( data );
 % We won't save data unless we make it here.
 data.Value.is_setup_complete = true;
 
+ListenChar( 2 );
+
 end
 
 function make_unified_opts(data, conf)
@@ -457,6 +459,7 @@ states('new_trial') = bsc.states.new_trial( data );
 states('end_trial') = bsc.states.end_trial( data );
 states('present_image') = bsc.states.present_image( data );
 states('inter_image_interval') = bsc.states.inter_image_interval( data );
+states('break') = bsc.states.break_state( data );
 
 % Enable logging of state entry and exit times.
 state_names = keys( states );

@@ -11,6 +11,7 @@ function destruct(data)
 warn_on_error( @() handle_tracker_close(data) );
 warn_on_error( @() handle_serial_close(data) );
 warn_on_error( @() handle_data_saving(data) );
+warn_on_error( @() ListenChar(0) );
 
 end
 

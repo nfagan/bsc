@@ -34,6 +34,7 @@ TIME_IN.present_image = 10;
 TIME_IN.inter_image_interval = 3;
 TIME_IN.task = 5 * 60;
 TIME_IN.delay_to_reward = 0;
+TIME_IN.break = 10;
 
 % INTERFACE
 INTERFACE = struct();
@@ -51,6 +52,8 @@ STRUCTURE.is_debug = true;
 STRUCTURE.debug_tags = 'all';
 STRUCTURE.max_n_trials = Inf;
 STRUCTURE.n_blocks = 100;
+STRUCTURE.n_trials_to_break = Inf;
+STRUCTURE.use_key_to_exit_break = false;
 
 % STIM_PARAMS
 STIM_PARAMS = struct();
